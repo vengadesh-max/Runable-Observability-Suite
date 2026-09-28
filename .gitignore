@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js build output
+/.next/
+/out/
+/build
+
+# Environment files - SENSITIVE DATA
+.env
+.env*.local
+.env.production
+.env.staging
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# IDE & OS
+.DS_Store
+*.pem
+.idea/
+.vscode/
