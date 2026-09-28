@@ -1,4 +1,4 @@
-# Pulse — Monitoring Pipeline for Multi-Agent SaaS Platforms
+# Monitoring System
 
 **Pulse** is a lightweight, zero-downtime operations monitoring pipeline deployable on **Vercel** with **Vercel Postgres (Neon)**. It continuously monitors LLM credit burn, database health, and API uptime for multi-agent SaaS platforms, paging the team on Slack when anomalous degradation or downtime occurs.
 
