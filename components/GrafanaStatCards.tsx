@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { ServiceStatus, Status } from '@/lib/types';
-import { Activity, Server, Database, Cpu, Flame, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Activity, Server, Database, Cpu, Flame } from 'lucide-react';
 
 interface GrafanaStatCardsProps {
   services: ServiceStatus[];

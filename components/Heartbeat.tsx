@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { SparklinePoint } from '@/lib/types';
-import { Activity, Info } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 interface HeartbeatProps {
   points: SparklinePoint[];

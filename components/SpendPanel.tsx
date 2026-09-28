@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Cpu, Flame, PlusCircle, Layers, DollarSign } from 'lucide-react';
+import { Cpu, Flame, PlusCircle, Layers } from 'lucide-react';
 
 interface SpendPanelProps {
   totalSpendUsd: number;
