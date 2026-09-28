@@ -113,97 +113,14 @@ export async function initDatabase(): Promise<boolean> {
 
     dbInitialized = true;
     console.log('[Pulse DB] Database tables and indexes successfully initialized.');
-    await seedRunableSampleData();
     return true;
   } catch (error) {
     console.warn('[Pulse DB] Failed to connect or initialize Postgres. Falling back to in-memory store:', error instanceof Error ? error.message : error);
     dbInitialized = true; // prevent repeated failing retries in single request
-    await seedRunableSampleData();
     return false;
   } finally {
     if (client) client.release();
   }
-}
-
-/**
- * Seeds sample Runable Company multi-agent SaaS operational telemetry into the database/memory store.
- */
-export async function seedRunableSampleData(): Promise<void> {
-  const existing = memoryStore.ledger.length;
-  if (existing > 0) return; // already seeded
-
-  console.log('[Pulse DB] Seeding sample Runable company telemetry into ledger...');
-  const now = Date.now();
-
-  // 1. Seed historical check ticks across the last 60 interval steps
-  const runableServices = [
-    { name: 'runable-sandbox-runner', type: 'api_watch' as const, baseMs: 42, unit: 'ms' as const },
-    { name: 'runable-agent-dispatcher', type: 'api_watch' as const, baseMs: 18, unit: 'ms' as const },
-    { name: 'runable-eval-pipeline', type: 'api_watch' as const, baseMs: 95, unit: 'ms' as const },
-    { name: 'runable-git-sync-worker', type: 'api_watch' as const, baseMs: 28, unit: 'ms' as const },
-    { name: 'runable-llm-proxy', type: 'api_watch' as const, baseMs: 110, unit: 'ms' as const },
-    { name: 'runable-postgres-primary', type: 'db_health' as const, baseMs: 12, unit: 'ms' as const },
-    { name: 'llm-budget-total', type: 'llm_credit' as const, baseMs: 345.8, unit: 'usd' as const },
-  ];
-
-  for (let i = 59; i >= 0; i--) {
-    const tickTime = new Date(now - i * 5 * 60 * 1000).toISOString();
-
-    for (const svc of runableServices) {
-      let status: 'healthy' | 'degraded' | 'critical' = 'healthy';
-      let latency = svc.baseMs + Math.floor(Math.random() * 25);
-      let msg = `${svc.name} operational (${latency}${svc.unit})`;
-      let alerted = false;
-
-      // Introduce realistic temporary dip around tick 15 to show Grafana sparkline degradation
-      if (i === 15 && svc.name === 'runable-sandbox-runner') {
-        status = 'degraded';
-        latency = 1850;
-        msg = `High latency detected in sandbox container pool (1850ms)`;
-        alerted = true;
-      } else if (i === 14 && svc.name === 'runable-sandbox-runner') {
-        status = 'critical';
-        latency = 5000;
-        msg = `Sandbox container pool request timeout (5000ms)`;
-        alerted = true;
-      } else if (svc.type === 'llm_credit') {
-        latency = Math.round((345.8 - (i * 2.1)) * 100) / 100;
-        msg = `MTD Spend: $${latency.toFixed(2)} / $600 (57.6% budget consumed)`;
-      }
-
-      memoryStore.ledger.unshift({
-        id: memoryStore.nextLedgerId++,
-        checkType: svc.type,
-        serviceName: svc.name,
-        status,
-        metricValue: latency,
-        metricUnit: svc.unit,
-        message: msg,
-        alerted,
-        checkedAt: tickTime,
-      });
-    }
-  }
-
-  // 2. Seed sample Agent LLM task cost events (§2.6)
-  const sampleEvents: Omit<LlmUsageEvent, 'id' | 'createdAt'>[] = [
-    { provider: 'openai', taskId: 'task-agent-codegen-pr-402', inputTokens: 145000, outputTokens: 24000, costUsd: 14.50 },
-    { provider: 'anthropic', taskId: 'task-auto-debugger-run-881', inputTokens: 92000, outputTokens: 18000, costUsd: 9.20 },
-    { provider: 'google-gemini', taskId: 'task-agent-test-runner-109', inputTokens: 55000, outputTokens: 12000, costUsd: 3.80 },
-    { provider: 'openai', taskId: 'task-refactoring-suite-55', inputTokens: 180000, outputTokens: 32000, costUsd: 18.00 },
-    { provider: 'anthropic', taskId: 'task-agent-security-auditor', inputTokens: 78000, outputTokens: 15000, costUsd: 7.80 },
-    { provider: 'openai', taskId: 'task-doc-generator-agent', inputTokens: 42000, outputTokens: 8500, costUsd: 4.20 },
-  ];
-
-  for (const evt of sampleEvents) {
-    memoryStore.llmEvents.push({
-      id: memoryStore.nextEventId++,
-      ...evt,
-      createdAt: new Date(now - Math.floor(Math.random() * 86400000)).toISOString(),
-    });
-  }
-
-  console.log('[Pulse DB] Seeding completed: 420 ledger rows and 6 Runable agent usage events generated.');
 }
 
 /**

@@ -2,7 +2,7 @@
 
 /**
  * @file app/page.tsx
- * @description Main Grafana Dashboard for Runable Operations & Multi-Agent SaaS Platform.
+ * @description Main Grafana Dashboard for Multi-Agent Operations & SaaS Infrastructure.
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -14,7 +14,7 @@ import { SpendPanel } from '@/components/SpendPanel';
 import { ServiceTable } from '@/components/ServiceTable';
 import { AlertFeed } from '@/components/AlertFeed';
 import { AgentTasksTable } from '@/components/AgentTasksTable';
-import { RefreshCw, Terminal, Layers } from 'lucide-react';
+import { RefreshCw, Terminal } from 'lucide-react';
 
 export default function DashboardPage() {
   const [data, setData] = useState<StatusPayload | null>(null);
@@ -65,26 +65,13 @@ export default function DashboardPage() {
     }
   };
 
-  // Seed sample Runable telemetry data via POST /api/seed
-  const handleSeedSampleData = async () => {
-    setIsRefreshingManual(true);
-    try {
-      await fetch('/api/seed', { method: 'POST' });
-      await fetchStatus();
-    } catch (err) {
-      console.error('[Grafana Dashboard] Sample data seeding failed:', err);
-    } finally {
-      setIsRefreshingManual(false);
-    }
-  };
-
   // Trigger test failure alert simulation
   const handleTriggerTestAlert = async () => {
     try {
       await fetch('/api/test-alert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceName: 'runable-sandbox-runner', status: 'critical', sendSlack: true }),
+        body: JSON.stringify({ serviceName: 'orders-api', status: 'critical', sendSlack: true }),
       });
       await fetchStatus();
     } catch (err) {
@@ -114,7 +101,6 @@ export default function DashboardPage() {
         refreshIntervalSec={refreshIntervalSec}
         onRefreshIntervalChange={setRefreshIntervalSec}
         onRunCronCycle={handleRunCronCycle}
-        onSeedSampleData={handleSeedSampleData}
         onTriggerTestAlert={handleTriggerTestAlert}
         isRefreshingManual={isRefreshingManual}
         timeRange={timeRange}
@@ -132,7 +118,7 @@ export default function DashboardPage() {
       {loading && !data && (
         <div className="grafana-panel p-12 text-center text-grafana-muted font-mono-data text-xs space-y-3 bg-white">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto text-grafana-blue" />
-          <p>Connecting to Runable Telemetry Engine & Initializing Grafana Panels...</p>
+          <p>Connecting to Operations Engine & Initializing Grafana Panels...</p>
         </div>
       )}
 
@@ -191,7 +177,7 @@ export default function DashboardPage() {
               <span className="text-grafana-border">|</span>
               <span>Advisory Lock Key: <code className="text-grafana-text">727272</code></span>
               <span className="text-grafana-border">|</span>
-              <span>Organization: <code className="text-grafana-text font-bold">Runable Operations</code></span>
+              <span>Cluster: <code className="text-grafana-text font-bold">Production SaaS</code></span>
             </div>
 
             <div className="flex items-center gap-3">

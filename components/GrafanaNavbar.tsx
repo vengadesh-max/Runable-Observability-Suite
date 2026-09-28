@@ -6,14 +6,13 @@
  */
 
 import React from 'react';
-import { Activity, RefreshCw, Database, Clock, Zap, AlertTriangle, Layers, ChevronRight, Play, Pause } from 'lucide-react';
+import { RefreshCw, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
 
 interface GrafanaNavbarProps {
   overallStatus: string;
   refreshIntervalSec: number;
   onRefreshIntervalChange: (sec: number) => void;
   onRunCronCycle: () => Promise<void>;
-  onSeedSampleData: () => Promise<void>;
   onTriggerTestAlert: () => Promise<void>;
   isRefreshingManual: boolean;
   timeRange: string;
@@ -25,7 +24,6 @@ export const GrafanaNavbar: React.FC<GrafanaNavbarProps> = ({
   refreshIntervalSec,
   onRefreshIntervalChange,
   onRunCronCycle,
-  onSeedSampleData,
   onTriggerTestAlert,
   isRefreshingManual,
   timeRange,
@@ -68,7 +66,7 @@ export const GrafanaNavbar: React.FC<GrafanaNavbarProps> = ({
           <ChevronRight className="w-3.5 h-3.5 text-grafana-muted" />
           <span className="font-semibold text-grafana-text flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-grafana-orange inline-block" />
-            Runable Multi-Agent SaaS Operations
+            Operations & Infrastructure Telemetry
           </span>
           {getStatusBadge()}
         </div>
@@ -120,14 +118,6 @@ export const GrafanaNavbar: React.FC<GrafanaNavbarProps> = ({
           </button>
 
           <button
-            onClick={onSeedSampleData}
-            className="flex items-center gap-1.5 px-3 py-1 rounded bg-grafana-subtle hover:bg-grafana-hover text-grafana-text font-semibold border border-grafana-border transition-all"
-          >
-            <Database className="w-3.5 h-3.5 text-grafana-orange" />
-            <span>Ingest Runable Telemetry</span>
-          </button>
-
-          <button
             onClick={onTriggerTestAlert}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-grafana-red font-semibold border border-red-200 transition-all"
           >
@@ -140,8 +130,7 @@ export const GrafanaNavbar: React.FC<GrafanaNavbarProps> = ({
       {/* Subheader Dashboard Metrics Summary Bar */}
       <div className="px-4 py-2 bg-grafana-subtle/50 text-[11px] font-mono-data text-grafana-muted flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span>Company: <strong className="text-grafana-text font-bold">Runable (runable.com)</strong></span>
-          <span>Environment: <strong className="text-grafana-text font-bold">Production Multi-Agent Cluster</strong></span>
+          <span>Cluster: <strong className="text-grafana-text font-bold">Production SaaS Cluster</strong></span>
           <span>Alert Channel: <strong className="text-grafana-blue font-bold">#ops-pulse-alerts</strong></span>
         </div>
         <div>
