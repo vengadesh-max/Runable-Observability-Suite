@@ -8,7 +8,7 @@ import { getLatestStatusPerService } from '../db';
 
 /**
  * Parses configured services from MONITORED_SERVICES. No endpoints are monitored
- * until the deployment owner explicitly provides them.
+ * until the configuration owner explicitly provides them.
  */
 export function getMonitoredServicesConfig(): MonitoredServiceConfig[] {
   const envVar = process.env.MONITORED_SERVICES;
