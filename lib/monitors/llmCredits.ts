@@ -6,16 +6,13 @@
 import { CheckResult, Status } from '../types';
 import { getMonthToDateLlmSpend } from '../db';
 
-/** Default LLM providers monitored */
-const DEFAULT_LLM_PROVIDERS = ['openai', 'anthropic', 'google-gemini'];
-
 /**
  * Gets configured monthly LLM budget in USD.
  */
 export function getMonthlyBudgetUsd(): number {
   const envVal = process.env.LLM_MONTHLY_BUDGET_USD;
-  const parsed = envVal ? parseFloat(envVal) : 600;
-  return isNaN(parsed) || parsed <= 0 ? 600 : parsed;
+  const parsed = envVal ? parseFloat(envVal) : 0;
+  return isNaN(parsed) || parsed <= 0 ? 0 : parsed;
 }
 
 /**
@@ -28,6 +25,7 @@ export function getMonthlyBudgetUsd(): number {
  */
 export async function checkLlmCredits(): Promise<CheckResult[]> {
   const budgetUsd = getMonthlyBudgetUsd();
+  if (budgetUsd === 0) return [];
   const { totalSpendUsd, providerBreakdown } = await getMonthToDateLlmSpend();
 
   const spendPct = totalSpendUsd / budgetUsd;
@@ -58,9 +56,8 @@ export async function checkLlmCredits(): Promise<CheckResult[]> {
     message: `MTD Spend: $${totalSpendUsd.toFixed(2)} / $${budgetUsd} (${spendPctFormatted}% of budget). Burn rate: ~$${burnRatePerHour.toFixed(2)}/hr`,
   });
 
-  // 2. Individual provider breakdown results
-  for (const provider of DEFAULT_LLM_PROVIDERS) {
-    const providerSpend = providerBreakdown[provider] || 0;
+  // 2. Individual provider breakdown results are created only for recorded providers.
+  for (const [provider, providerSpend] of Object.entries(providerBreakdown)) {
     const providerPct = (providerSpend / budgetUsd) * 100;
 
     let providerStatus: Status = 'healthy';

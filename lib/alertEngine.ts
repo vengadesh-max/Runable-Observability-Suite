@@ -15,8 +15,14 @@ export function getCooldownMinutes(): number {
 }
 
 /** Base dashboard URL for links in Slack alerts */
-export function getDashboardUrl(): string {
-  return process.env.DASHBOARD_URL || 'http://localhost:3000';
+export function getDashboardUrl(): string | null {
+  const value = process.env.DASHBOARD_URL;
+  if (!value) return null;
+  try {
+    return new URL(value).toString();
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -45,7 +51,7 @@ Provide:
     const response = await model.generateContent(prompt);
     return response.response.text().trim();
   } catch (err) {
-    console.warn('[Pulse AlertEngine] Gemini AI diagnosis generation error:', err);
+    console.warn('[ObsSuite AlertEngine] Gemini AI diagnosis generation error:', err);
     return null;
   }
 }
@@ -56,7 +62,7 @@ Provide:
 export async function sendSlackWebhook(payload: object): Promise<boolean> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
-    console.log('[Pulse AlertEngine] SLACK_WEBHOOK_URL not configured. Alert logged to stdout:', JSON.stringify(payload));
+    console.log('[ObsSuite AlertEngine] SLACK_WEBHOOK_URL not configured. Alert logged to stdout:', JSON.stringify(payload));
     return false;
   }
 
@@ -68,12 +74,12 @@ export async function sendSlackWebhook(payload: object): Promise<boolean> {
     });
 
     if (!res.ok) {
-      console.error(`[Pulse AlertEngine] Slack webhook HTTP error: ${res.status} ${res.statusText}`);
+      console.error(`[ObsSuite AlertEngine] Slack webhook HTTP error: ${res.status} ${res.statusText}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('[Pulse AlertEngine] Failed to deliver Slack webhook:', err);
+    console.error('[ObsSuite AlertEngine] Failed to deliver Slack webhook:', err);
     return false;
   }
 }
@@ -144,12 +150,12 @@ export async function sendSlackAlert(result: CheckResult): Promise<boolean> {
 
   blocks.push({
     type: 'context',
-    elements: [
-      {
-        type: 'mrkdwn',
-        text: `<${dashboardUrl}|View Pulse Dashboard> | Time: ${new Date().toUTCString()}`,
-      },
-    ],
+    elements: [{
+      type: 'mrkdwn',
+      text: dashboardUrl
+        ? `<${dashboardUrl}|View Observability Dashboard> | Time: ${new Date().toUTCString()}`
+        : `Time: ${new Date().toUTCString()}`,
+    }],
   });
 
   const attachment: SlackAttachment = {
@@ -186,7 +192,9 @@ export async function sendSlackRecovery(result: CheckResult, downDurationMinutes
       elements: [
         {
           type: 'mrkdwn',
-          text: `<${dashboardUrl}|View Pulse Dashboard> | Time: ${new Date().toUTCString()}`,
+        text: dashboardUrl
+          ? `<${dashboardUrl}|View Observability Dashboard> | Time: ${new Date().toUTCString()}`
+          : `Time: ${new Date().toUTCString()}`,
         },
       ],
     },
@@ -223,13 +231,15 @@ export async function evaluateAndAlert(results: CheckResult[]): Promise<{ alerte
     // Cooldown check
     const isCoolingDown = await wasAlertedRecently(r.serviceName, cooldownMinutes);
     if (isCoolingDown) {
-      console.log(`[Pulse AlertEngine] Cooldown active for ${r.serviceName}. Skipping duplicate alert.`);
+      console.log(`[ObsSuite AlertEngine] Cooldown active for ${r.serviceName}. Skipping duplicate alert.`);
       continue;
     }
 
-    await sendSlackAlert(r);
-    await markServiceAlerted(r.serviceName);
-    alertedCount++;
+    const delivered = await sendSlackAlert(r);
+    if (delivered) {
+      await markServiceAlerted(r.serviceName);
+      alertedCount++;
+    }
   }
 
   return { alertedCount, recoveryCount };

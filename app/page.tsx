@@ -2,129 +2,113 @@
 
 /**
  * @file app/page.tsx
- * @description Main Grafana Dashboard for Multi-Agent Operations & SaaS Infrastructure.
+ * @description Observability Suite — Main dashboard for Multi-Agent Operations & SaaS Infrastructure.
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { StatusPayload } from '@/lib/types';
+import { createEmptyStatusPayload } from '@/lib/statusPayload';
 import { GrafanaNavbar } from '@/components/GrafanaNavbar';
 import { GrafanaStatCards } from '@/components/GrafanaStatCards';
 import { Heartbeat } from '@/components/Heartbeat';
 import { SpendPanel } from '@/components/SpendPanel';
 import { ServiceTable } from '@/components/ServiceTable';
 import { AlertFeed } from '@/components/AlertFeed';
-import { AgentTasksTable } from '@/components/AgentTasksTable';
-import { RefreshCw, Terminal } from 'lucide-react';
+import { ConfigurationDialog } from '@/components/ConfigurationDialog';
+import { Terminal } from 'lucide-react';
 
 export default function DashboardPage() {
-  const [data, setData] = useState<StatusPayload | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [data, setData] = useState<StatusPayload>(() => createEmptyStatusPayload());
   const [refreshIntervalSec, setRefreshIntervalSec] = useState<number>(15);
-  const [timeRange, setTimeRange] = useState<string>('15m');
   const [isRefreshingManual, setIsRefreshingManual] = useState<boolean>(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [configurationOpen, setConfigurationOpen] = useState(false);
 
-  // Fetch status payload from GET /api/status
   const fetchStatus = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch('/api/status', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const res = await fetch('/api/status', { cache: 'no-store', signal: controller.signal });
+      if (!res.ok) {
+        setData(createEmptyStatusPayload());
+        throw new Error(`HTTP ${res.status} — service unavailable`);
+      }
       const json: StatusPayload = await res.json();
       setData(json);
       setStatusError(null);
     } catch (err) {
-      console.error('[Grafana Dashboard] Error fetching status:', err);
-      setStatusError(err instanceof Error ? err.message : String(err));
+      console.error('[ObsSuite Dashboard] Error fetching status:', err);
+      setStatusError(err instanceof Error && err.name === 'AbortError' ? 'Status request timed out after 5 seconds' : err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      window.clearTimeout(timeout);
     }
   }, []);
 
-  // Poll /api/status on configurable schedule
   useEffect(() => {
     fetchStatus();
     if (refreshIntervalSec <= 0) return;
-
-    const interval = setInterval(() => {
-      fetchStatus();
-    }, refreshIntervalSec * 1000);
-
+    const interval = setInterval(fetchStatus, refreshIntervalSec * 1000);
     return () => clearInterval(interval);
   }, [fetchStatus, refreshIntervalSec]);
 
-  // Trigger manual cron cycle via GET /api/cron?force=true
   const handleRunCronCycle = async () => {
+    const canRunChecks = data.configuration.databaseConfigured || data.configuration.monitoredServiceCount > 0 || data.configuration.budgetConfigured;
+    if (!canRunChecks) {
+      setConfigurationOpen(true);
+      return;
+    }
     setIsRefreshingManual(true);
     try {
-      await fetch('/api/cron?force=true', { cache: 'no-store' });
+      const response = await fetch('/api/cron?force=true', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Check request failed with HTTP ${response.status}`);
       await fetchStatus();
     } catch (err) {
-      console.error('[Grafana Dashboard] Failed to execute cron cycle:', err);
+      console.error('[ObsSuite Dashboard] Failed to execute cron cycle:', err);
+      setStatusError(err instanceof Error ? err.message : 'Unable to run a monitoring check.');
     } finally {
       setIsRefreshingManual(false);
     }
   };
 
-  // Trigger test failure alert simulation
-  const handleTriggerTestAlert = async () => {
-    try {
-      await fetch('/api/test-alert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceName: 'orders-api', status: 'critical', sendSlack: true }),
-      });
-      await fetchStatus();
-    } catch (err) {
-      console.error('[Grafana Dashboard] Test alert simulation failed:', err);
-    }
-  };
-
-  // Log custom LLM task cost event
-  const handleLogLlmEvent = async (provider: string, costUsd: number) => {
-    try {
-      await fetch('/api/events/llm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, costUsd, taskId: `task-${Date.now().toString(36)}` }),
-      });
-      await fetchStatus();
-    } catch (err) {
-      console.error('[Grafana Dashboard] Error logging LLM event:', err);
-    }
-  };
-
   return (
-    <main className="min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto bg-grafana-bg">
-      {/* Grafana Top Navbar */}
+    <main className="min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto bg-bg">
+
       <GrafanaNavbar
-        overallStatus={data?.summary.overallStatus || 'healthy'}
+        overallStatus={data.summary.overallStatus}
         refreshIntervalSec={refreshIntervalSec}
         onRefreshIntervalChange={setRefreshIntervalSec}
         onRunCronCycle={handleRunCronCycle}
-        onTriggerTestAlert={handleTriggerTestAlert}
+        onOpenConfiguration={() => setConfigurationOpen(true)}
         isRefreshingManual={isRefreshingManual}
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
+        canRunChecks={data.configuration.databaseConfigured || data.configuration.monitoredServiceCount > 0 || data.configuration.budgetConfigured}
+        manualChecksAvailable={data.configuration.manualChecksAvailable}
       />
 
-      {/* Error banner if status fetch failed */}
       {statusError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-grafana-red rounded font-mono-data text-xs shadow-xs">
-          ⚠️ Connection error fetching Grafana status metrics: {statusError}
+        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-sm font-mono-data text-xs flex items-start gap-3">
+          <span className="text-rose-500 mt-0.5 text-base">⚠</span>
+          <div>
+            <p className="font-bold text-rose-900 mb-0.5">Telemetry signal lost</p>
+            <p className="text-rose-700">{statusError}</p>
+          </div>
         </div>
       )}
 
-      {/* Initial Loading Skeleton */}
-      {loading && !data && (
-        <div className="grafana-panel p-12 text-center text-grafana-muted font-mono-data text-xs space-y-3 bg-white">
-          <RefreshCw className="w-6 h-6 animate-spin mx-auto text-grafana-blue" />
-          <p>Connecting to Operations Engine & Initializing Grafana Panels...</p>
-        </div>
+      {data.summary.overallStatus === 'unknown' && (
+        <section className="mb-6 border border-stone-300 bg-stone-50 p-4 text-sm text-stone-700">
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <p className="font-semibold text-editorial-text">Configuration required</p>
+              <p className="mt-1 text-xs">Connect a database or at least one monitored endpoint to begin collecting telemetry.</p>
+            </div>
+            <button type="button" onClick={() => setConfigurationOpen(true)} className="border border-stone-400 bg-white px-3 py-2 text-xs font-semibold text-editorial-text hover:bg-stone-100">
+              Open configuration
+            </button>
+          </div>
+        </section>
       )}
 
-      {data && (
-        <>
-          {/* 1. Grafana Big Stat Summary Cards Strip */}
+      <>
           <GrafanaStatCards
             services={data.services}
             totalSpendUsd={data.llmSpend.totalMonthToDateUsd}
@@ -134,16 +118,13 @@ export default function DashboardPage() {
             overallStatus={data.summary.overallStatus}
           />
 
-          {/* 2. Pipeline Latency & Health Timeseries Panel */}
           <Heartbeat
             points={data.sparkline}
             overallStatus={data.summary.overallStatus}
             lastUpdated={data.summary.lastUpdated}
           />
 
-          {/* 3. Main Dashboard Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left 8 Cols: Spend Panel + Service Table */}
             <div className="lg:col-span-8 space-y-6">
               <SpendPanel
                 totalSpendUsd={data.llmSpend.totalMonthToDateUsd}
@@ -151,46 +132,37 @@ export default function DashboardPage() {
                 spendPercentage={data.llmSpend.spendPercentage}
                 burnRatePerHourUsd={data.llmSpend.burnRatePerHourUsd}
                 providerBreakdown={data.llmSpend.providerBreakdown}
-                onLogLlmEvent={handleLogLlmEvent}
               />
-
               <ServiceTable services={data.services} />
             </div>
 
-            {/* Right 4 Cols: Persistent Alert Feed */}
-            <div className="lg:col-span-4 h-full">
+            <div className="lg:col-span-4">
               <AlertFeed
                 alerts={data.alerts}
-                onTriggerTestAlert={handleTriggerTestAlert}
               />
             </div>
           </div>
 
-          {/* 4. Agent Tasks Attribution Table */}
-          <AgentTasksTable />
-
-          {/* 5. Grafana Footer Bar */}
-          <footer className="grafana-panel mt-6 p-4 text-xs font-mono-data text-grafana-muted flex flex-col md:flex-row items-center justify-between gap-3 bg-white">
-            <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-grafana-blue" />
-              <span>Target Cadence: <code className="text-grafana-text font-bold">*/5 * * * *</code></span>
-              <span className="text-grafana-border">|</span>
-              <span>Advisory Lock Key: <code className="text-grafana-text">727272</code></span>
-              <span className="text-grafana-border">|</span>
-              <span>Cluster: <code className="text-grafana-text font-bold">Production SaaS</code></span>
+          <footer className="editorial-card mt-6 p-4 text-xs font-mono-data text-editorial-muted flex flex-col md:flex-row items-center justify-between gap-3 bg-sand-subtle">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5" />
+                Monitoring runs when the scheduled check is configured.
+              </span>
             </div>
-
-            <div className="flex items-center gap-3">
-              <a href="/api/status" target="_blank" className="hover:text-grafana-blue transition-colors">
-                GET /api/status ↗
-              </a>
-              <a href="/api/cron?force=true" target="_blank" className="hover:text-grafana-blue transition-colors">
-                GET /api/cron ↗
+            <div className="flex items-center gap-4">
+              <a href="/api/status" target="_blank" rel="noopener noreferrer"
+                className="hover:text-burgundy transition-colors">
+                Status API
               </a>
             </div>
           </footer>
-        </>
-      )}
+      </>
+      <ConfigurationDialog
+        configuration={data.configuration}
+        open={configurationOpen}
+        onClose={() => setConfigurationOpen(false)}
+      />
     </main>
   );
 }

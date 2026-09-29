@@ -7,22 +7,21 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run",
+    "test": "vitest run --exclude tests/e2e/**",
+    "test:e2e": "playwright test",
     "migrate": "node --loader ts-node/register scripts/migrate.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "@vercel/postgres": "^0.10.0",
-    "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "lucide-react": "^0.453.0",
     "next": "^14.2.15",
     "pg": "^8.13.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwind-merge": "^2.5.4"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^20.17.0",
     "@types/pg": "^8.11.10",
     "@types/react": "^18.3.11",

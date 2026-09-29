@@ -6,40 +6,34 @@
 import { CheckResult, MonitoredServiceConfig, Status } from '../types';
 import { getLatestStatusPerService } from '../db';
 
-/** Default fallback services if MONITORED_SERVICES env var is not configured */
-const DEFAULT_MONITORED_SERVICES: MonitoredServiceConfig[] = [
-  {
-    name: 'orders-api',
-    url: 'https://httpbin.org/status/200',
-    expectedStatus: 200,
-    timeoutMs: 5000,
-  },
-  {
-    name: 'agent-dispatch-service',
-    url: 'https://httpbin.org/status/200',
-    expectedStatus: 200,
-    timeoutMs: 5000,
-  },
-  {
-    name: 'billing-webhooks',
-    url: 'https://httpbin.org/status/200',
-    expectedStatus: 200,
-    timeoutMs: 5000,
-  },
-];
-
 /**
- * Parses configured services from env var or returns default fallbacks.
+ * Parses configured services from MONITORED_SERVICES. No endpoints are monitored
+ * until the deployment owner explicitly provides them.
  */
 export function getMonitoredServicesConfig(): MonitoredServiceConfig[] {
   const envVar = process.env.MONITORED_SERVICES;
-  if (!envVar) return DEFAULT_MONITORED_SERVICES;
+  if (!envVar) return [];
   try {
     const parsed = JSON.parse(envVar);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_MONITORED_SERVICES;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((service): MonitoredServiceConfig[] => {
+      if (!service || typeof service.name !== 'string' || typeof service.url !== 'string') return [];
+      try {
+        const url = new URL(service.url);
+        if (!['http:', 'https:'].includes(url.protocol) || !service.name.trim()) return [];
+        return [{
+          name: service.name.trim(),
+          url: url.toString(),
+          expectedStatus: Number.isInteger(service.expectedStatus) ? service.expectedStatus : 200,
+          timeoutMs: Number.isInteger(service.timeoutMs) ? Math.min(Math.max(service.timeoutMs, 1000), 30_000) : 5000,
+        }];
+      } catch {
+        return [];
+      }
+    });
   } catch (err) {
-    console.warn('[Pulse apiWatch] Invalid MONITORED_SERVICES JSON string, using defaults:', err);
-    return DEFAULT_MONITORED_SERVICES;
+    console.warn('[ObsSuite apiWatch] Invalid MONITORED_SERVICES JSON string:', err);
+    return [];
   }
 }
 
@@ -52,6 +46,7 @@ export function getMonitoredServicesConfig(): MonitoredServiceConfig[] {
  */
 export async function checkApiWatch(): Promise<CheckResult[]> {
   const services = getMonitoredServicesConfig();
+  if (services.length === 0) return [];
   const recentHistory = await getLatestStatusPerService();
 
   const results: CheckResult[] = [];
@@ -67,7 +62,7 @@ export async function checkApiWatch(): Promise<CheckResult[]> {
       const response = await fetch(s.url, {
         method: 'GET',
         signal: controller.signal,
-        headers: { 'User-Agent': 'Pulse-Monitoring-Agent/1.0' },
+        headers: { 'User-Agent': 'ObsSuite-Monitoring-Agent/1.0' },
       });
       clearTimeout(timer);
 

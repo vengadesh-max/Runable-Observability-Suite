@@ -2,7 +2,7 @@
 
 /**
  * @file components/AlertFeed.tsx
- * @description Grafana-style Incident Log & Slack Alert Feed panel (Warm & Light theme).
+ * @description Editorial Neoclassical Incident Log & Slack Alert Feed panel.
  */
 
 import React from 'react';
@@ -11,29 +11,21 @@ import { Bell, AlertTriangle, ShieldAlert, CheckCircle, ExternalLink } from 'luc
 
 interface AlertFeedProps {
   alerts: AlertFeedItem[];
-  onTriggerTestAlert: () => Promise<void>;
 }
 
-export const AlertFeed: React.FC<AlertFeedProps> = ({ alerts, onTriggerTestAlert }) => {
+export const AlertFeed: React.FC<AlertFeedProps> = ({ alerts = [] }) => {
   return (
-    <div className="grafana-panel h-full flex flex-col justify-between">
+    <div className="editorial-card h-full flex flex-col justify-between bg-white">
       <div>
         {/* Panel Header */}
-        <div className="grafana-panel-header flex items-center justify-between">
+        <div className="editorial-header-strip flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-grafana-orange" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-grafana-text">
+            <Bell className="w-4 h-4 text-burntOrange" />
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-editorial-text font-editorial-serif italic">
               Ops Incident & Slack Alert Feed
             </h2>
           </div>
 
-          <button
-            onClick={onTriggerTestAlert}
-            className="text-[11px] font-mono-data px-2 py-0.5 rounded bg-red-50 hover:bg-red-100 text-grafana-red border border-red-200 transition-all flex items-center gap-1 font-semibold"
-          >
-            <AlertTriangle className="w-3 h-3" />
-            <span>Simulate Failure</span>
-          </button>
         </div>
 
         {/* Feed List */}
@@ -43,24 +35,24 @@ export const AlertFeed: React.FC<AlertFeedProps> = ({ alerts, onTriggerTestAlert
             const isRecovery = item.isRecovery;
 
             const borderClass = isRecovery
-              ? 'border-l-4 border-l-grafana-green'
+              ? 'border-l-4 border-l-emerald-600'
               : isCritical
-              ? 'border-l-4 border-l-grafana-red'
-              : 'border-l-4 border-l-grafana-amber';
+              ? 'border-l-4 border-l-burgundy'
+              : 'border-l-4 border-l-burntOrange';
 
             return (
               <div
                 key={item.id}
-                className={`p-3 rounded bg-grafana-subtle border border-grafana-border ${borderClass} font-mono-data text-xs space-y-1`}
+                className={`p-3 rounded bg-sand-subtle border border-sand-border ${borderClass} font-mono-data text-xs space-y-1`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-grafana-text flex items-center gap-1.5">
+                  <span className="font-semibold text-editorial-text flex items-center gap-1.5 font-sans">
                     {isRecovery ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-grafana-green" />
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-700" />
                     ) : isCritical ? (
-                      <ShieldAlert className="w-3.5 h-3.5 text-grafana-red" />
+                      <ShieldAlert className="w-3.5 h-3.5 text-burgundy" />
                     ) : (
-                      <AlertTriangle className="w-3.5 h-3.5 text-grafana-amber" />
+                      <AlertTriangle className="w-3.5 h-3.5 text-burntOrange" />
                     )}
                     {item.serviceName}
                   </span>
@@ -78,9 +70,9 @@ export const AlertFeed: React.FC<AlertFeedProps> = ({ alerts, onTriggerTestAlert
                   </span>
                 </div>
 
-                <p className="text-grafana-muted leading-snug">{item.message}</p>
+                <p className="text-editorial-muted leading-snug">{item.message}</p>
 
-                <div className="flex items-center justify-between text-[10px] text-grafana-dim pt-1 border-t border-grafana-border/50">
+                <div className="flex items-center justify-between text-[10px] text-editorial-dim pt-1 border-t border-sand-border">
                   <span>Metric: {item.metricValue ?? 'N/A'} {item.metricUnit || ''}</span>
                   <span>{new Date(item.checkedAt).toLocaleTimeString()}</span>
                 </div>
@@ -89,20 +81,18 @@ export const AlertFeed: React.FC<AlertFeedProps> = ({ alerts, onTriggerTestAlert
           })}
 
           {alerts.length === 0 && (
-            <div className="p-6 text-center border border-dashed border-grafana-border rounded text-grafana-muted font-mono-data text-xs space-y-2 bg-grafana-subtle">
-              <CheckCircle className="w-6 h-6 text-grafana-green mx-auto opacity-80" />
-              <p className="font-semibold text-grafana-text">No active incidents logged in ledger.</p>
-              <p className="text-[11px] text-grafana-muted">Use "Simulate Failure" button to test Slack alerts.</p>
+            <div className="p-6 text-center border border-dashed border-sand-border rounded text-editorial-muted font-mono-data text-xs space-y-2 bg-sand-subtle">
+              <CheckCircle className="w-6 h-6 text-emerald-700 mx-auto opacity-80" />
+              <p className="font-semibold text-editorial-text font-editorial-serif italic">No incidents recorded.</p>
+              <p className="text-[11px] text-editorial-muted">Connect a monitored endpoint to begin collecting alerts.</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="p-3 bg-grafana-subtle border-t border-grafana-border text-[11px] text-grafana-muted font-mono-data flex items-center justify-between">
-        <span>Channel: <strong className="text-grafana-text">#ops-pulse-alerts</strong></span>
-        <span className="text-grafana-blue flex items-center gap-1 font-semibold">
-          Cooldown: 15m <ExternalLink className="w-3 h-3" />
-        </span>
+      <div className="p-3 bg-sand-subtle border-t border-sand-border text-[11px] text-editorial-muted font-mono-data flex items-center justify-between">
+        <span>Alerts are delivered when a Slack webhook is configured.</span>
+        <ExternalLink className="w-3 h-3 text-editorial-muted" />
       </div>
     </div>
   );

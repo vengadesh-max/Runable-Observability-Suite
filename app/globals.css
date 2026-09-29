@@ -1,95 +1,100 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-main: #F4F5F7;
+  --bg-sand: #FBF9F5;
+  --bg-creme: #F4F0EA;
   --bg-card: #FFFFFF;
-  --text-primary: #0F172A;
-  --text-secondary: #64748B;
-  --border-subtle: #E2E8F0;
-  --status-healthy: #16A34A;
-  --status-degraded: #D97706;
-  --status-critical: #DC2626;
-  --accent-orange: #FF7800;
-  --accent-blue: #2563EB;
-  --font-ibm-plex-sans: 'IBM Plex Sans', sans-serif;
-  --font-ibm-plex-mono: 'IBM Plex Mono', monospace;
+  --text-primary: #2A2421;
+  --text-muted: #6E645E;
+  --burgundy: #581C25;
+  --burgundy-light: #7A2836;
+  --burnt-orange: #C85A32;
+  --border-sand: #E5DEC9;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
 }
 
 body {
-  background-color: var(--bg-main);
+  background-color: var(--bg-sand);
   color: var(--text-primary);
-  font-family: var(--font-ibm-plex-sans);
+  font-family: var(--font-sans);
   margin: 0;
   padding: 0;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
+.font-editorial-serif {
+  font-family: var(--font-serif);
+}
+
 .font-mono-data {
-  font-family: var(--font-ibm-plex-mono);
+  font-family: var(--font-mono);
 }
 
-/* Grafana Panel Card */
-.grafana-panel {
+/* Neoclassical Editorial Card */
+.editorial-card {
   background-color: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid #E5DEC9;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px 0 rgba(42, 36, 33, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.grafana-panel:hover {
-  border-color: #CBD5E1;
-  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.06);
+.editorial-card:hover {
+  border-color: #D8CFC4;
+  box-shadow: 0 3px 8px 0 rgba(42, 36, 33, 0.06);
 }
 
-/* Panel Header Strip */
-.grafana-panel-header {
-  background-color: #F8FAFC;
-  border-bottom: 1px solid #E2E8F0;
-  padding: 8px 14px;
-  border-top-left-radius: 5px;
-  border-top-right-radius: 5px;
+/* Editorial Header Strip */
+.editorial-header-strip {
+  background-color: #F4F0EA;
+  border-bottom: 1px solid #E5DEC9;
+  padding: 10px 16px;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
 }
 
-/* Grafana Status Pills & Badges */
+/* Neoclassical Status Badges */
 .badge-healthy {
-  background-color: #F0FDF4;
-  color: #16A34A;
-  border: 1px solid #BBF7D0;
+  background-color: #F2F9F4;
+  color: #1B5E305;
+  color: #276749;
+  border: 1px solid #C6F6D5;
 }
 
 .badge-degraded {
-  background-color: #FFFBEB;
-  color: #D97706;
-  border: 1px solid #FDE68A;
+  background-color: #FDF6EC;
+  color: #9C4221;
+  border: 1px solid #FBD38D;
 }
 
 .badge-critical {
-  background-color: #FEF2F2;
-  color: #DC2626;
-  border: 1px solid #FECACA;
+  background-color: #FDF2F2;
+  color: #7B1113;
+  border: 1px solid #FEB2B2;
 }
 
-/* Custom Scrollbar for Light Theme */
+/* Custom Scrollbar for Sand & Creme Theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F4F5F7;
+  background: #FBF9F5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #D8CFC4;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #C85A32;
 }

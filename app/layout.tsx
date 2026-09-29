@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Pulse — Monitoring Pipeline for Multi-Agent SaaS Platforms',
+  title: 'Observability Suite — Monitoring Pipeline for Multi-Agent SaaS Platforms',
   description: 'Ops monitoring pipeline watching LLM credit burn, database health, and API uptime with real-time Slack paging.',
 };
 

@@ -2,27 +2,23 @@
 
 /**
  * @file components/Heartbeat.tsx
- * @description Grafana-style Timeseries Heartbeat chart panel (Warm & Light theme).
+ * @description Editorial Neoclassical Timeseries Heartbeat chart panel.
  */
 
 import React, { useState } from 'react';
-import { SparklinePoint } from '@/lib/types';
+import { SparklinePoint, Status } from '@/lib/types';
 import { Activity } from 'lucide-react';
 
 interface HeartbeatProps {
   points: SparklinePoint[];
-  overallStatus: 'healthy' | 'degraded' | 'critical';
+  overallStatus: Status;
   lastUpdated: string;
 }
 
-export const Heartbeat: React.FC<HeartbeatProps> = ({ points, overallStatus, lastUpdated }) => {
+export const Heartbeat: React.FC<HeartbeatProps> = ({ points = [], overallStatus = 'unknown', lastUpdated }) => {
   const [hoveredPoint, setHoveredPoint] = useState<SparklinePoint | null>(null);
 
-  const displayPoints = points.length >= 10 ? points : Array.from({ length: 30 }, (_, i) => ({
-    checkedAt: new Date(Date.now() - (30 - i) * 5 * 60 * 1000).toISOString(),
-    severity: 0,
-    status: 'healthy' as const,
-  }));
+  const displayPoints = points;
 
   const svgWidth = 800;
   const svgHeight = 70;
@@ -44,35 +40,36 @@ export const Heartbeat: React.FC<HeartbeatProps> = ({ points, overallStatus, las
   const areaD = `${pathD} L ${svgWidth} ${svgHeight} L 0 ${svgHeight} Z`;
 
   const getStatusColor = (status: string) => {
-    if (status === 'critical') return '#DC2626';
-    if (status === 'degraded') return '#D97706';
-    return '#16A34A';
+    if (status === 'critical') return '#7B1113';
+    if (status === 'degraded') return '#C85A32';
+    if (status === 'unknown') return '#57534E';
+    return '#276749';
   };
 
   const statusColor = getStatusColor(overallStatus);
 
   return (
-    <div className="grafana-panel mb-6 overflow-hidden">
-      {/* Grafana Panel Header */}
-      <div className="grafana-panel-header flex items-center justify-between">
+    <div className="editorial-card mb-6 overflow-hidden bg-white">
+      {/* Editorial Header Strip */}
+      <div className="editorial-header-strip flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-grafana-blue" />
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-grafana-text">
-            Runable Operations — Pipeline Latency & Health Timeseries <span className="text-grafana-muted font-normal">(60 Cycles)</span>
+          <Activity className="w-4 h-4 text-burgundy" />
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-editorial-text font-editorial-serif italic">
+            Pipeline Latency & Health Timeseries <span className="text-editorial-muted font-normal font-mono-data">(60 Cycles)</span>
           </h2>
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] font-mono-data text-grafana-muted">
+        <div className="flex items-center gap-3 text-[11px] font-mono-data text-editorial-muted">
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-grafana-green inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
             <span>Healthy (0)</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-grafana-amber inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-burntOrange inline-block" />
             <span>Degraded (1)</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-grafana-red inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-burgundy inline-block" />
             <span>Critical (2)</span>
           </div>
         </div>
@@ -80,27 +77,27 @@ export const Heartbeat: React.FC<HeartbeatProps> = ({ points, overallStatus, las
 
       {/* Chart Canvas */}
       <div className="p-4 bg-white relative">
-        <div className="relative w-full h-20 bg-grafana-subtle rounded border border-grafana-border p-1 flex items-center">
+        <div className="relative w-full h-20 bg-sand-subtle rounded border border-sand-border p-1 flex items-center">
           {/* Horizontal Grid lines */}
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none p-2 opacity-30">
-            <div className="border-b border-dashed border-grafana-muted text-[9px] font-mono-data text-grafana-muted">Critical (2)</div>
-            <div className="border-b border-dashed border-grafana-muted text-[9px] font-mono-data text-grafana-muted">Degraded (1)</div>
-            <div className="text-[9px] font-mono-data text-grafana-muted">Healthy (0)</div>
+            <div className="border-b border-dashed border-editorial-muted text-[9px] font-mono-data text-editorial-muted">Critical (2)</div>
+            <div className="border-b border-dashed border-editorial-muted text-[9px] font-mono-data text-editorial-muted">Degraded (1)</div>
+            <div className="text-[9px] font-mono-data text-editorial-muted">Healthy (0)</div>
           </div>
 
-          <svg
+          {displayPoints.length > 0 ? <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             className="w-full h-full overflow-visible z-10"
             preserveAspectRatio="none"
           >
             <defs>
-              <linearGradient id="grafanaSparkGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="editorialSparkGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={statusColor} stopOpacity="0.25" />
                 <stop offset="100%" stopColor={statusColor} stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
-            <path d={areaD} fill="url(#grafanaSparkGradient)" />
+            <path d={areaD} fill="url(#editorialSparkGradient)" />
             <path
               d={pathD}
               fill="none"
@@ -122,27 +119,29 @@ export const Heartbeat: React.FC<HeartbeatProps> = ({ points, overallStatus, las
                 onMouseLeave={() => setHoveredPoint(null)}
               />
             ))}
-          </svg>
+          </svg> : (
+            <p className="relative z-10 w-full text-center text-xs font-mono-data text-editorial-muted">No completed checks yet.</p>
+          )}
 
           {/* Hover Tooltip */}
           {hoveredPoint && (
-            <div className="absolute top-2 right-4 bg-white border border-grafana-border px-3 py-1.5 rounded text-xs font-mono-data shadow-md z-20 flex items-center gap-2 text-grafana-text">
+            <div className="absolute top-2 right-4 bg-white border border-sand-border px-3 py-1.5 rounded text-xs font-mono-data shadow-md z-20 flex items-center gap-2 text-editorial-text">
               <span
                 className="w-2 h-2 rounded-full"
                 style={{ backgroundColor: getStatusColor(hoveredPoint.status) }}
               />
               <span className="capitalize font-semibold">{hoveredPoint.status}</span>
-              <span className="text-grafana-muted">
+              <span className="text-editorial-muted">
                 ({new Date(hoveredPoint.checkedAt).toLocaleTimeString()})
               </span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between mt-2 text-[11px] font-mono-data text-grafana-muted">
+        <div className="flex items-center justify-between mt-2 text-[11px] font-mono-data text-editorial-muted">
           <span>T-60 Cycles</span>
-          <span>Overall Status: <strong className="uppercase" style={{ color: statusColor }}>{overallStatus}</strong></span>
-          <span>Last Updated: {new Date(lastUpdated).toLocaleTimeString()}</span>
+          <span>Overall Status: <strong className="uppercase font-semibold" style={{ color: statusColor }}>{overallStatus}</strong></span>
+          <span>Last Updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Not checked'}</span>
         </div>
       </div>
     </div>

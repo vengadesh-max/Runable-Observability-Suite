@@ -8,30 +8,34 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        grafana: {
-          bg: "#F4F5F7",           // Warm off-white background
-          card: "#FFFFFF",         // Crisp white panel background
-          subtle: "#F8FAFC",       // Panel header & row highlight
-          hover: "#F1F5F9",        // Hover state
-          border: "#E2E8F0",       // Panel border line
-          borderDark: "#CBD5E1",   // Accent border
-          orange: "#FF7800",       // Grafana signature orange
-          blue: "#2563EB",         // Metric blue
-          green: "#16A34A",        // Healthy green
-          amber: "#D97706",        // Degraded amber
-          red: "#DC2626",          // Critical red
-          text: "#0F172A",         // Primary dark text
-          muted: "#64748B",        // Secondary slate text
-          dim: "#94A3B8",          // Subdued metadata text
-        }
+        sand: {
+          DEFAULT: "#FBF9F5",
+          subtle: "#F4F0EA",
+          border: "#E5DEC9",
+          darkBorder: "#D8CFC4",
+        },
+        burgundy: {
+          DEFAULT: "#581C25",
+          hover: "#42151C",
+          light: "#7A2836",
+        },
+        burntOrange: {
+          DEFAULT: "#C85A32",
+          hover: "#B04D27",
+        },
+        editorial: {
+          text: "#2A2421",
+          muted: "#6E645E",
+          dim: "#A0958C",
+        },
       },
       fontFamily: {
-        sans: ["var(--font-ibm-plex-sans)", "Inter", "system-ui", "sans-serif"],
-        mono: ["var(--font-ibm-plex-mono)", "JetBrains Mono", "monospace"],
+        serif: ["var(--font-serif)", "Playfair Display", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "IBM Plex Mono", "monospace"],
       },
       boxShadow: {
-        grafana: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)",
-        panelHeader: "inset 0 -1px 0 0 #E2E8F0",
+        editorial: "0 1px 4px 0 rgba(42, 36, 33, 0.04)",
       }
     },
   },

@@ -1,13 +1,13 @@
 /**
  * @file lib/types.ts
- * @description Core TypeScript type definitions and domain interfaces for Pulse Monitoring Pipeline.
+ * @description Core TypeScript type definitions and domain interfaces for Observability Suite Monitoring Pipeline.
  */
 
 /** Category of system check being performed */
 export type CheckType = 'llm_credit' | 'db_health' | 'api_watch';
 
 /** Operational status level of a service or check */
-export type Status = 'healthy' | 'degraded' | 'critical';
+export type Status = 'unknown' | 'healthy' | 'degraded' | 'critical';
 
 /** Unit of measurement for metric values */
 export type MetricUnit = 'usd' | 'ms' | 'pct' | null;
@@ -18,7 +18,7 @@ export type MetricUnit = 'usd' | 'ms' | 'pct' | null;
 export interface CheckResult {
   /** Type category of the check */
   checkType: CheckType;
-  /** Unique name identifier of the monitored service (e.g. 'openai', 'orders-db', 'orders-api') */
+  /** Unique name identifier of the monitored service */
   serviceName: string;
   /** Current evaluated status */
   status: Status;
@@ -128,5 +128,14 @@ export interface StatusPayload {
     criticalCount: number;
     overallStatus: Status;
     lastUpdated: string;
+  };
+  configuration: {
+    databaseConfigured: boolean;
+    monitoredServiceCount: number;
+    slackConfigured: boolean;
+    geminiConfigured: boolean;
+    budgetConfigured: boolean;
+    ingestionKeyConfigured: boolean;
+    manualChecksAvailable: boolean;
   };
 }

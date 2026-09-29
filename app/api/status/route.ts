@@ -1,90 +1,100 @@
 /**
  * @file app/api/status/route.ts
- * @description Single API endpoint serving current operational status, sparklines, alert feed, and LLM spend for dashboard.
+ * @description Single API endpoint serving current operational status, sparklines, alert feed, and LLM spend.
+ * READ-ONLY: Live monitor checks run exclusively via /api/cron. This route only reads from the ledger.
  */
 
 import { NextResponse } from 'next/server';
 import { getAlertFeed, getLatestStatusPerService, getMonthToDateLlmSpend, getSparklineHistory } from '@/lib/db';
 import { getMonthlyBudgetUsd } from '@/lib/monitors/llmCredits';
-import { CheckResult, ServiceStatus, Status, StatusPayload } from '@/lib/types';
-import { checkDbHealth } from '@/lib/monitors/dbHealth';
-import { checkApiWatch } from '@/lib/monitors/apiWatch';
-import { checkLlmCredits } from '@/lib/monitors/llmCredits';
-import { saveCheckResults } from '@/lib/db';
+import { getMonitoredServicesConfig } from '@/lib/monitors/apiWatch';
+import { createEmptyStatusPayload } from '@/lib/statusPayload';
+import { ServiceStatus, Status, StatusPayload } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Ensures initial check results are populated if ledger is empty.
- */
-async function ensureInitialData(): Promise<void> {
-  const existing = await getLatestStatusPerService();
-  if (existing.length === 0) {
-    const results: CheckResult[] = [];
-    const [llm, db, api] = await Promise.all([
-      checkLlmCredits(),
-      checkDbHealth(),
-      checkApiWatch(),
-    ]);
-    results.push(...llm, ...db, ...api);
-    await saveCheckResults(results);
-  }
+/** Wraps a promise with a timeout — resolves to fallback value if it exceeds limitMs */
+async function withTimeout<T>(promise: Promise<T>, limitMs: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), limitMs)),
+  ]);
 }
 
 /**
  * GET /api/status
- * Consolidated payload endpoint for Pulse dashboard (§2.5).
+ * Consolidated payload endpoint for Observability Suite dashboard.
+ * Always returns HTTP 200 with valid JSON — never hangs or throws to client.
  */
 export async function GET() {
   try {
-    await ensureInitialData();
+    const now = new Date();
+    const budgetUsd = getMonthlyBudgetUsd();
+    const monitoredServices = getMonitoredServicesConfig();
+    const configuration = {
+      databaseConfigured: Boolean(process.env.POSTGRES_URL || process.env.DATABASE_URL),
+      monitoredServiceCount: monitoredServices.length,
+      slackConfigured: Boolean(process.env.SLACK_WEBHOOK_URL),
+      geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+      budgetConfigured: budgetUsd > 0,
+      ingestionKeyConfigured: Boolean(process.env.INGEST_API_KEY),
+      manualChecksAvailable: process.env.NODE_ENV !== 'production',
+    };
+    const emptyPayload = createEmptyStatusPayload(
+      monitoredServices,
+      configuration.databaseConfigured,
+      budgetUsd,
+      now.toISOString(),
+      configuration,
+    );
 
+    // All DB reads race against a 2.5s timeout — UI never blocks on slow/unavailable DB
     const [latestRows, sparklineData, alertRows, llmMetrics] = await Promise.all([
-      getLatestStatusPerService(),
-      getSparklineHistory(60),
-      getAlertFeed(20),
-      getMonthToDateLlmSpend(),
+      withTimeout(getLatestStatusPerService(), 2500, []),
+      withTimeout(getSparklineHistory(60), 2500, []),
+      withTimeout(getAlertFeed(20), 2500, []),
+      withTimeout(getMonthToDateLlmSpend(), 2500, { totalSpendUsd: 0, providerBreakdown: {} }),
     ]);
 
-    const budgetUsd = getMonthlyBudgetUsd();
-    const spendPct = Math.min(100, Math.round((llmMetrics.totalSpendUsd / budgetUsd) * 100));
+    const totalSpend = llmMetrics.totalSpendUsd || 0;
+    const spendPct = budgetUsd > 0 ? Math.min(100, Math.round((totalSpend / budgetUsd) * 100)) : 0;
 
-    // Calculate burn rate per hour
-    const now = new Date();
     const dayOfMonth = Math.max(1, now.getDate());
-    const hoursPassed = (dayOfMonth - 1) * 24 + now.getHours() + 1;
-    const burnRatePerHour = llmMetrics.totalSpendUsd / hoursPassed;
+    const hoursPassed = Math.max(1, (dayOfMonth - 1) * 24 + now.getHours());
+    const burnRatePerHour = totalSpend / hoursPassed;
 
-    // Transform service status rows
-    const services: ServiceStatus[] = latestRows.map((row) => ({
-      serviceName: row.serviceName,
-      checkType: row.checkType,
-      status: row.status,
-      metricValue: row.metricValue,
-      metricUnit: row.metricUnit,
-      message: row.message,
-      lastChecked: row.checkedAt,
-      alerted: row.alerted,
-    }));
+    const latestServices = latestRows.map((row) => ({
+            serviceName: row.serviceName,
+            checkType: row.checkType,
+            status: row.status,
+            metricValue: row.metricValue,
+            metricUnit: row.metricUnit,
+            message: row.message,
+            lastChecked: row.checkedAt,
+            alerted: row.alerted,
+          }));
+    const latestByName = new Map(latestServices.map((service) => [service.serviceName, service]));
+    const configuredServices = emptyPayload.services.map((service) => latestByName.get(service.serviceName) || service);
+    const unconfiguredServices = latestServices.filter((service) => !emptyPayload.services.some((empty) => empty.serviceName === service.serviceName));
+    const services: ServiceStatus[] = [...configuredServices, ...unconfiguredServices];
 
-    // Aggregate overall status
     let healthyCount = 0;
     let degradedCount = 0;
     let criticalCount = 0;
-
     for (const s of services) {
       if (s.status === 'critical') criticalCount++;
       else if (s.status === 'degraded') degradedCount++;
-      else healthyCount++;
+      else if (s.status === 'healthy') healthyCount++;
     }
 
-    let overallStatus: Status = 'healthy';
+    let overallStatus: Status = services.some((service) => service.status !== 'unknown') ? 'healthy' : 'unknown';
     if (criticalCount > 0) overallStatus = 'critical';
     else if (degradedCount > 0) overallStatus = 'degraded';
 
     const payload: StatusPayload = {
       services,
-      sparkline: sparklineData,
+      sparkline:
+        sparklineData.length > 0 ? sparklineData : emptyPayload.sparkline,
       alerts: alertRows.map((a) => ({
         id: a.id,
         serviceName: a.serviceName,
@@ -96,7 +106,7 @@ export async function GET() {
         checkedAt: a.checkedAt,
       })),
       llmSpend: {
-        totalMonthToDateUsd: Math.round(llmMetrics.totalSpendUsd * 100) / 100,
+        totalMonthToDateUsd: Math.round(totalSpend * 100) / 100,
         budgetUsd,
         spendPercentage: spendPct,
         burnRatePerHourUsd: Math.round(burnRatePerHour * 100) / 100,
@@ -110,11 +120,28 @@ export async function GET() {
         overallStatus,
         lastUpdated: new Date().toISOString(),
       },
+      configuration,
     };
 
     return NextResponse.json(payload);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: errorMsg }, { status: 500 });
+    console.error('[ObsSuite Status API] Fatal status route error:', errorMsg);
+
+    // Nuclear fallback — always returns valid JSON with zero-state
+    const budgetUsd = getMonthlyBudgetUsd();
+    const monitoredServices = getMonitoredServicesConfig();
+    return NextResponse.json(createEmptyStatusPayload(
+      monitoredServices,
+      Boolean(process.env.POSTGRES_URL || process.env.DATABASE_URL),
+      budgetUsd,
+      '',
+      {
+        slackConfigured: Boolean(process.env.SLACK_WEBHOOK_URL),
+        geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+        ingestionKeyConfigured: Boolean(process.env.INGEST_API_KEY),
+        manualChecksAvailable: process.env.NODE_ENV !== 'production',
+      },
+    ));
   }
 }

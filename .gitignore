@@ -8,9 +8,12 @@ pnpm-lock.yaml
 
 # Testing
 /coverage
+/playwright-report/
+/test-results/
 
 # Next.js build output
 /.next/
+/.next-e2e/
 /out/
 /build
 *.tsbuildinfo

@@ -15,6 +15,7 @@ import { probeDatabaseHealth } from '../db';
  * @returns Array containing single CheckResult for primary-db
  */
 export async function checkDbHealth(): Promise<CheckResult[]> {
+  if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) return [];
   const serviceName = 'primary-db';
   try {
     const { latencyMs, error } = await probeDatabaseHealth();

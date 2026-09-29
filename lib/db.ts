@@ -21,9 +21,9 @@ export const pool =
     ssl: process.env.NODE_ENV === 'production' || getPgUrl()?.includes('vercel-storage.com') || getPgUrl()?.includes('neon.tech')
       ? { rejectUnauthorized: false }
       : false,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    max: 5,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 2000,
   });
 
 if (process.env.NODE_ENV !== 'production') {
@@ -56,7 +56,7 @@ export async function initDatabase(): Promise<boolean> {
   if (dbInitialized) return true;
   const connectionString = getPgUrl();
   if (!connectionString) {
-    console.warn('[Pulse DB] No POSTGRES_URL configured. Using in-memory fallback ledger.');
+    console.warn('[ObsSuite DB] No POSTGRES_URL configured. Using in-memory fallback ledger.');
     dbInitialized = true;
     return false;
   }
@@ -112,10 +112,10 @@ export async function initDatabase(): Promise<boolean> {
     `);
 
     dbInitialized = true;
-    console.log('[Pulse DB] Database tables and indexes successfully initialized.');
+    console.log('[ObsSuite DB] Database tables and indexes successfully initialized.');
     return true;
   } catch (error) {
-    console.warn('[Pulse DB] Failed to connect or initialize Postgres. Falling back to in-memory store:', error instanceof Error ? error.message : error);
+    console.warn('[ObsSuite DB] Failed to connect or initialize Postgres. Falling back to in-memory store:', error instanceof Error ? error.message : error);
     dbInitialized = true; // prevent repeated failing retries in single request
     return false;
   } finally {
@@ -135,7 +135,7 @@ export async function tryAdvisoryLock(lockId = 727272): Promise<boolean> {
     const res = await pool.query('SELECT pg_try_advisory_lock($1) AS locked', [lockId]);
     return Boolean(res.rows[0]?.locked);
   } catch (err) {
-    console.warn('[Pulse DB] Advisory lock acquisition error:', err);
+    console.warn('[ObsSuite DB] Advisory lock acquisition error:', err);
     return true;
   }
 }
@@ -152,7 +152,7 @@ export async function unlockAdvisoryLock(lockId = 727272): Promise<boolean> {
     const res = await pool.query('SELECT pg_advisory_unlock($1) AS unlocked', [lockId]);
     return Boolean(res.rows[0]?.unlocked);
   } catch (err) {
-    console.warn('[Pulse DB] Advisory lock release error:', err);
+    console.warn('[ObsSuite DB] Advisory lock release error:', err);
     return false;
   }
 }
@@ -184,7 +184,7 @@ export async function saveCheckResults(results: CheckResult[]): Promise<LedgerRo
       }
       return savedRows;
     } catch (err) {
-      console.warn('[Pulse DB] Failed to save to Postgres, falling back to memory store:', err);
+      console.warn('[ObsSuite DB] Failed to save to Postgres, falling back to memory store:', err);
     }
   }
 
@@ -223,7 +223,7 @@ export async function markServiceAlerted(serviceName: string): Promise<void> {
       );
       return;
     } catch (err) {
-      console.warn('[Pulse DB] Error marking service alerted in Postgres:', err);
+      console.warn('[ObsSuite DB] Error marking service alerted in Postgres:', err);
     }
   }
 
@@ -249,7 +249,7 @@ export async function wasAlertedRecently(serviceName: string, cooldownMinutes: n
       );
       return Boolean(res.rows[0]?.alerted_recently);
     } catch (err) {
-      console.warn('[Pulse DB] Error checking cooldown in Postgres:', err);
+      console.warn('[ObsSuite DB] Error checking cooldown in Postgres:', err);
     }
   }
 
@@ -284,7 +284,7 @@ export async function getPreviousCheckResult(serviceName: string): Promise<Ledge
       }
       return null;
     } catch (err) {
-      console.warn('[Pulse DB] Error getting previous check result:', err);
+      console.warn('[ObsSuite DB] Error getting previous check result:', err);
     }
   }
 
@@ -312,7 +312,7 @@ export async function getLatestStatusPerService(): Promise<LedgerRow[]> {
         checkedAt: new Date(row.checkedAt).toISOString(),
       }));
     } catch (err) {
-      console.warn('[Pulse DB] Error querying latest status per service:', err);
+      console.warn('[ObsSuite DB] Error querying latest status per service:', err);
     }
   }
 
@@ -352,7 +352,7 @@ export async function getSparklineHistory(limit = 60): Promise<{ checkedAt: stri
         };
       });
     } catch (err) {
-      console.warn('[Pulse DB] Error querying sparkline history:', err);
+      console.warn('[ObsSuite DB] Error querying sparkline history:', err);
     }
   }
 
@@ -397,7 +397,7 @@ export async function getAlertFeed(limit = 20): Promise<LedgerRow[]> {
         checkedAt: new Date(row.checkedAt).toISOString(),
       }));
     } catch (err) {
-      console.warn('[Pulse DB] Error querying alert feed:', err);
+      console.warn('[ObsSuite DB] Error querying alert feed:', err);
     }
   }
 
@@ -446,7 +446,7 @@ export async function getMonthToDateLlmSpend(): Promise<{ totalSpendUsd: number;
       }
       return { totalSpendUsd: totalSpend, providerBreakdown: breakdown };
     } catch (err) {
-      console.warn('[Pulse DB] Error querying MTD spend from Postgres:', err);
+      console.warn('[ObsSuite DB] Error querying MTD spend from Postgres:', err);
     }
   }
 
@@ -491,7 +491,7 @@ export async function logLlmUsageEvent(event: Omit<LlmUsageEvent, 'id' | 'create
         createdAt: new Date(row.createdAt).toISOString(),
       };
     } catch (err) {
-      console.warn('[Pulse DB] Error logging LLM usage event to Postgres:', err);
+      console.warn('[ObsSuite DB] Error logging LLM usage event to Postgres:', err);
     }
   }
 

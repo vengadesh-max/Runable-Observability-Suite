@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
   // 1. Bearer Token Authorization Check (§5.3)
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get('authorization');
-  const isManualForce = request.nextUrl.searchParams.get('force') === 'true';
+  const isManualForce = process.env.NODE_ENV !== 'production' && request.nextUrl.searchParams.get('force') === 'true';
 
-  if (cronSecret && !isManualForce && authHeader !== `Bearer ${cronSecret}`) {
+  if (!isManualForce && (!cronSecret || authHeader !== `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: 'Unauthorized: Invalid CRON_SECRET token' }, { status: 401 });
   }
 
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         // Monitor failure is recorded as critical signal
         results.push({
           checkType: 'api_watch',
-          serviceName: 'pulse-monitor-runner',
+          serviceName: 'obs-monitor-runner',
           status: 'critical',
           metricValue: null,
           metricUnit: null,
