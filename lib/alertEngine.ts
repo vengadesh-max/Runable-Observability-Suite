@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { CheckResult, Status } from './types';
+import { CheckResult } from './types';
 import { getPreviousCheckResult, markServiceAlerted, wasAlertedRecently } from './db';
 
 /** Default cooldown period in minutes before re-alerting on the same service */
