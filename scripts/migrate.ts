@@ -9,16 +9,16 @@ dotenv.config();
 import { initDatabase, pool } from '../lib/db';
 
 async function main() {
-  console.log('[Pulse Migrate] Starting database migration check...');
+  console.log('[ObsSuite Migrate] Starting database migration check...');
   try {
     const success = await initDatabase();
     if (success) {
-      console.log('[Pulse Migrate] Migration finished successfully.');
+      console.log('[ObsSuite Migrate] Migration finished successfully.');
     } else {
-      console.log('[Pulse Migrate] Database URL not provided or un-reachable. Run skipped.');
+      console.log('[ObsSuite Migrate] Database URL not provided or un-reachable. Run skipped.');
     }
   } catch (err) {
-    console.error('[Pulse Migrate] Migration failed with error:', err);
+    console.error('[ObsSuite Migrate] Migration failed with error:', err);
     process.exit(1);
   } finally {
     await pool.end().catch(() => {});
